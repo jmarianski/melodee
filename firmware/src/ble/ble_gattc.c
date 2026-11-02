@@ -187,6 +187,10 @@ static void gc_descs_rsp(const uint8_t *p, uint16_t n)
 static void gc_groups_rsp(const uint8_t *p, uint16_t n)
 {
     uint16_t i, el = p[1], last = 0;
+    if (el != 6u && el != 20u) {                /* (16-bit or 128-bit UUIDs; 0 would never advance) */
+        gc_fail(BLE_CF_GATT, 0);
+        return;
+    }
     for (i = 2; i + el <= n; i = (uint16_t)(i + el)) {
         last = ble_rd16(p + i + 2);
         if (el == 20u && ble_eq(p + i + 4, BLE_UUID_MIDI_SVC, 16)) {
@@ -217,6 +221,12 @@ static void gc_error(const uint8_t *p)
         return;
     }
     switch (bgc.st) {
+    case G_MTU:
+        if (code == GE_NOT_SUPP)                /* no MTU exchange: the default 23 stays */
+            gc_find_service();
+        else
+            gc_fail(BLE_CF_GATT, code);
+        return;
     case G_READ:
         if (code == 0x02u || code == GE_NOT_SUPP) gc_subscribe();
         else gc_fail(BLE_CF_GATT, code);

@@ -138,6 +138,7 @@ enum { PH_GAP = 1, PH_NAME_D, PH_NAME, PH_BAT, PH_BAT_D, PH_BAT_V, PH_MIDI, PH_M
        PH_DIS, PH_DIS_D, PH_DIS_V, PH_LAST = PH_DIS_V };
 static struct {
     int alive, need_auth, no_fbtv, no_midi, sec_req, wrong_conf, fail_pair, lost_bond;
+    int no_mtu, bad_group;                     /* Exchange MTU refused; Read By Group Type entries of length 0 */
     uint8_t q[96][2 + 255];
     int qn;
     uint8_t l2[700];
@@ -466,6 +467,10 @@ static void p_att_rx(const uint8_t *p, int n)
         p_att_err(0x0A, (uint16_t)(p[1] | p[2] << 8), 0x02);
         return;
     case 0x02:
+        if (P.no_mtu) {
+            p_att_err(0x02, 0, 0x06);
+            return;
+        }
         r[0] = 0x03, r[1] = 185, r[2] = 0;
         p_att(r, 3);
         return;
@@ -483,7 +488,10 @@ static void p_att_rx(const uint8_t *p, int n)
         return;
     case 0x10:                                 /* Read By Group Type (primary services) */
         s = (uint16_t)(p[1] | p[2] << 8);
-        if (s <= PH_GAP) {
+        if (P.bad_group) {
+            memset(r, 0, 8), r[0] = 0x11;
+            p_att(r, 8);
+        } else if (s <= PH_GAP) {
             r[0] = 0x11, r[1] = 6, r[2] = PH_GAP, r[3] = 0, r[4] = PH_NAME, r[5] = 0, r[6] = 0x00, r[7] = 0x18;
             r[8] = PH_BAT, r[9] = 0, r[10] = PH_BAT_V, r[11] = 0, r[12] = 0x0F, r[13] = 0x18;
             p_att(r, 14);
@@ -1092,6 +1100,17 @@ static void test_gatt_variants(void)
     p_events(30);
     check("no BLE-MIDI service: the link left, NO MIDI SERVICE", !ble_connected() &&
           ble_central_fail() == BLE_CF_NO_MIDI && ble_dgc.gc_no_midi >= 1 && hw.adv_on);
+    connect(0);
+    P.no_mtu = 1;
+    p_events(50);
+    check("a server without Exchange MTU (Request Not Supported): 23 kept, the discovery goes on, ready",
+          ble_central_state() == BLE_CS_READY && batt.mtu == 23 && P.cccd == 1);
+    leave();
+    connect(0);
+    P.no_fbtv = P.bad_group = 1;
+    p_events(30);
+    check("Read By Group Type entries of length 0: a GATT failure, the link left (no endless loop)",
+          !ble_connected() && ble_central_fail() == BLE_CF_GATT);
 }
 
 static void test_endings(void)
