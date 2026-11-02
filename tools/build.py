@@ -436,7 +436,8 @@ def check(img, syms, dis, rt):
             errors += stack_budget.check(audit, sym("_ustack_top") - sym("_ustack_lo"),
                                          sym("_sstack_top") - sym("_sstack_lo"),
                                          sym("_cpu1_stacks_hi") - sym("_cpu1_stacks_lo"),
-                                         sym("_cpu1_ustack_top") - sym("_cpu1_stacks_lo"))
+                                         sym("_cpu1_ustack_top") - sym("_cpu1_stacks_lo"),
+                                         ble=os.environ.get("MELODEE_BLE") != "0")
             (OUT / "stack-budget.json").write_text(json.dumps(audit, indent=2) + "\n")
             notes.append("stack audit: " + ", ".join(f"{n} {p[0]} B" for n, p in audit["paths"].items()))
         except ValueError as error:

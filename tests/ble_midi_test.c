@@ -246,11 +246,18 @@ static void start(void)
     assert(stub_mode == BLE_MODE_OFF && ble_midi_tag() == 0u);
     ble_midi_set(BLE_MODE_KEYBOARD); fm1_ms += 800u; ble_midi_poll();
     assert(stub_starts == 1 && stub_mode == BLE_MODE_KEYBOARD && host_clock_sets == 1);
+    /* a settings restore (the editor's backup) changes the mode without the menu: the next poll applies it */
+    settings_ble = BLE_MODE_COMPUTER; ble_midi_poll();
+    assert(stub_mode == BLE_MODE_COMPUTER && ble_mode_run == BLE_MODE_COMPUTER && stub_starts == 1);
+    settings_ble = BLE_MODE_OFF; ble_midi_poll();
+    assert(stub_mode == BLE_MODE_OFF && ble_midi_tag() == 0u);
+    settings_ble = BLE_MODE_KEYBOARD; ble_midi_poll();
+    assert(stub_mode == BLE_MODE_KEYBOARD && stub_starts == 1);
     /* the boot guard: a start that failed leaves the radio off and says so */
     ble_up = 0; ble_mode_run = 0; ble_failed = 0; stub_starts = 0;
     bootguard.failed = 1; ble_midi_init(); bootguard.failed = 0;
     assert(!stub_starts && !strcmp(ble_midi_value(), "HELD"));
-    puts("BLE start: claimed only when ON, AT NEXT START without room, one start, modes, header tag, boot guard");
+    puts("BLE start: claimed only when ON, AT NEXT START without room, one start, modes, header tag, a restore, boot guard");
 }
 
 int main(void)

@@ -227,11 +227,13 @@ def analyze(ir, dis, src):
     return {'paths': paths, 'frames': frames, 'indirect': {n: sorted(v)for n, v in indirect.items()if n in reachable}}
 
 
-def check(report, foreground, irq, worker, worker_user=None):
+def check(report, foreground, irq, worker, worker_user=None, ble=False):
     paths = report['paths']
     errors = []
     required = {'fm1_cstart', 'isr_alnk0',
                 'isr_timer5', 'fm1_core1_main', 'fm1_fault_c'}
+    if ble:
+        required |= {'isr_ble_event', 'isr_ble_rx'}
     if not required <= paths.keys():
         return ['missing stack roots: '+str(sorted(required-paths.keys()))]
     # Extra 2 KiB foreground margin beyond the full linked call path.

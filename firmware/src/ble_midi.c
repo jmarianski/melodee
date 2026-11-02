@@ -299,6 +299,8 @@ static void ble_midi_set(uint8_t mode)
 static void ble_midi_poll(void)                 /* main loop */
 {
     uint8_t s;
+    if (!ble_set_pending && !ble_failed && settings_ble != ble_mode_run)
+        ble_apply(0);                           /* a settings restore (the editor's backup): not saved again */
     if (ble_set_pending && fm1_ms - ble_set_t > 700u) {
         ble_set_pending = 0;
         settings_save();

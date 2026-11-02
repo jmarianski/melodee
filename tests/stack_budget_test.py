@@ -36,6 +36,7 @@ class StackBudget(unittest.TestCase):
         self.assertEqual(report['paths']['fm1_cstart'][0], 240)
         self.assertEqual(report['paths']['fm1_cstart'][1], ['fm1_cstart', 'helper'])
         self.assertEqual(stack_budget.check(report, 3000, 1000, 2000), [])
+        self.assertIn('missing stack roots', stack_budget.check(report, 3000, 1000, 2000, ble=True)[0])
         self.assertTrue(stack_budget.check(report, 100, 100, 100))
         self.assertTrue(stack_budget.check(report, 3000, 1000, 4096, 512))
         self.assertTrue(stack_budget.check(report, 3000, 1000, 4096, 4000))
